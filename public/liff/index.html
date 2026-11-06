@@ -218,7 +218,27 @@
         return;
       }
 
-      // 2. ตรวจสอบ LIFF ID
+      // 2. ตรวจสอบโหมดจำลอง / ดูหน้าบัตรของสมาชิกคนอื่น (Admin Preview Mode)
+      const urlParams = new URLSearchParams(window.location.search);
+      const previewMemberId = urlParams.get('view') || urlParams.get('memberId');
+      if (previewMemberId) {
+        try {
+          const uRes = await fetch(`/api/user/${encodeURIComponent(previewMemberId)}?t=${Date.now()}`);
+          const uJson = await uRes.json();
+          if (uJson.success && uJson.data && uJson.data.user) {
+            currentUser = uJson.data.user;
+            renderUser(uJson.data.user, uJson.data.transactions);
+            loadRewards();
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            return;
+          }
+        } catch (e) {
+          console.error('Preview load error:', e);
+        }
+      }
+
+      // 3. ตรวจสอบ LIFF ID
       if (!liffId) {
         liffId = '2012420035-F8twisdh';
       }

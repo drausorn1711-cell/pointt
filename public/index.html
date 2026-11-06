@@ -688,11 +688,18 @@
                 <td class="py-3 px-4 text-right font-bold text-[#7a0c1e]">${Number(m.points || 0).toLocaleString()} แต้ม</td>
                 <td class="py-3 px-4 text-center text-slate-400">${dateStr}</td>
                 <td class="py-3 px-4 text-center">
-                  <button onclick="deleteMember('${m.id}', '${m.displayName}')" 
-                          class="p-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 transition inline-flex items-center justify-center" 
-                          title="ลบสมาชิกที่ไม่ได้ใช้แล้ว">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  </button>
+                  <div class="inline-flex items-center space-x-1">
+                    <a href="/liff/?view=${m.id}" target="_blank"
+                       class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition inline-flex items-center justify-center"
+                       title="ดูหน้าบัตรสมาชิกของลูกค้ารายนี้">
+                      <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                    <button onclick="deleteMember('${m.id}', '${m.displayName}')" 
+                            class="p-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 transition inline-flex items-center justify-center" 
+                            title="ลบสมาชิกที่ไม่ได้ใช้แล้ว">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
                 </td>
               </tr>
             `;
