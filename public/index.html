@@ -83,7 +83,7 @@
         <p class="text-xs text-rose-200">นำลิงก์นี้ไปผูกกับปุ่ม "บัตรสมาชิก / เช็คแต้ม" ใน LINE Official Account Manager</p>
       </div>
       <div class="flex items-center space-x-2 bg-black/40 p-2 rounded-2xl border border-rose-400/30">
-        <code id="liffUrlCode" class="text-xs font-mono px-3 text-rose-200 select-all">https://liff.line.me/2012400848-86Z8gVyN</code>
+        <code id="liffUrlCode" class="text-xs font-mono px-3 text-rose-200 select-all">https://liff.line.me/2012420035-F8twisdh</code>
         <button onclick="copyLiffUrl()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow">
           <i data-lucide="copy" class="w-3.5 h-3.5"></i>
           <span>คัดลอก</span>
@@ -354,8 +354,13 @@
         return `
           <div class="bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 flex flex-col justify-between hover:shadow-sm transition">
             <div class="relative">
-              <img src="${r.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop'}" 
-                   class="w-full h-36 object-cover" alt="${r.title}">
+              ${r.imageUrl ? `
+                <img src="${r.imageUrl}" class="w-full h-36 object-cover" alt="${r.title}">
+              ` : `
+                <div class="w-full h-36 bg-gradient-to-br from-rose-50 to-amber-50 flex items-center justify-center text-[#7a0c1e]/40">
+                  <i data-lucide="gift" class="w-12 h-12"></i>
+                </div>
+              `}
               <div class="absolute top-2 right-2 flex space-x-1">
                 <span class="bg-[#7a0c1e] text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow">
                   ${Number(r.pointsRequired).toLocaleString()} แต้ม
@@ -475,12 +480,11 @@
       document.getElementById('rwTitle').value = '';
       document.getElementById('rwPoints').value = '50';
       document.getElementById('rwStock').value = '50';
-      const defaultImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
-      document.getElementById('rwImage').value = defaultImg;
+      document.getElementById('rwImage').value = '';
       document.getElementById('rwDesc').value = '';
       const fileInput = document.getElementById('rwFileInput');
       if (fileInput) fileInput.value = '';
-      updateImagePreview(defaultImg);
+      updateImagePreview('');
       document.getElementById('rewardModal').classList.remove('hidden');
     }
 

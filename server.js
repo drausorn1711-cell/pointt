@@ -115,7 +115,7 @@ const server = http.createServer(async (req, res) => {
       success: true,
       data: {
         ...settings,
-        liffId: settings.liffId || process.env.LINE_LIFF_ID || '2012400848-86Z8gVyN'
+        liffId: process.env.LINE_LIFF_ID || settings.liffId || '2012420035-F8twisdh'
       }
     });
   }
