@@ -322,6 +322,13 @@
       lucide.createIcons();
       await loadDashboardData();
       await loadRewards();
+
+      // Real-time Dashboard Sync ทุก 5 วินาที
+      setInterval(() => {
+        if (!document.hidden) {
+          loadDashboardData();
+        }
+      }, 5000);
     }
 
     async function loadRewards() {

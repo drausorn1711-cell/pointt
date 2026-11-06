@@ -273,17 +273,48 @@
     async function refreshUserData() {
       if (!currentUser) return;
       try {
-        const res = await fetch(`/api/user/${currentUser.id}`);
+        const res = await fetch(`/api/user/${currentUser.id}?t=${Date.now()}`, {
+          cache: 'no-store'
+        });
         const json = await res.json();
         if (json.success) {
+          const oldPoints = currentUser.points;
           currentUser = json.data.user;
           renderUser(json.data.user, json.data.transactions);
           loadRewards();
+
+          // เอฟเฟกต์เด้งเมื่อแต้มมีการเปลี่ยนแปลงแบบ Real-time
+          if (json.data.user.points !== oldPoints) {
+            const pointsEl = document.getElementById('userPoints');
+            if (pointsEl) {
+              pointsEl.classList.add('scale-125', 'text-amber-300', 'transition-all', 'duration-300');
+              setTimeout(() => {
+                pointsEl.classList.remove('scale-125', 'text-amber-300');
+              }, 600);
+            }
+          }
         }
       } catch (e) {
         console.error('Refresh error:', e);
       }
     }
+
+    // Real-time Auto Sync ทุกๆ 3 วินาที (ทั้งมือถือและคอมพิวเตอร์)
+    setInterval(() => {
+      if (!document.hidden && currentUser) {
+        refreshUserData();
+      }
+    }, 3000);
+
+    // รีเฟรชทันทีเมื่อสลับกลับมาดูหน้านี้
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && currentUser) {
+        refreshUserData();
+      }
+    });
+    window.addEventListener('focus', () => {
+      if (currentUser) refreshUserData();
+    });
 
     function renderUser(user, transactions) {
       document.getElementById('userName').innerText = user.displayName;
