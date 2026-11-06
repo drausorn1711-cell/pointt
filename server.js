@@ -111,7 +111,7 @@ const server = http.createServer(async (req, res) => {
   // 1. GET /api/settings
   if (pathname === '/api/settings' && method === 'GET') {
     loadEnv();
-    const settings = db.getSettings();
+    const settings = await db.getSettings();
     return sendJson(res, 200, {
       success: true,
       data: {
@@ -124,11 +124,11 @@ const server = http.createServer(async (req, res) => {
   // 2. GET /api/user/:identifier
   if (pathname.startsWith('/api/user/') && method === 'GET' && !pathname.includes('transactions')) {
     const identifier = pathname.replace('/api/user/', '');
-    const user = db.getUserById(identifier);
+    const user = await db.getUserById(identifier);
     if (!user) {
       return sendJson(res, 404, { success: false, message: 'ไม่พบข้อมูลสมาชิก' });
     }
-    const transactions = db.getTransactionsByUser(user.id);
+    const transactions = await db.getTransactionsByUser(user.id);
     return sendJson(res, 200, {
       success: true,
       data: { user, transactions }
@@ -142,8 +142,8 @@ const server = http.createServer(async (req, res) => {
     if (!lineUserId) {
       return sendJson(res, 400, { success: false, message: 'ต้องการ lineUserId' });
     }
-    const user = db.findOrCreateUser({ lineUserId, displayName, pictureUrl, phone });
-    const transactions = db.getTransactionsByUser(user.id);
+    const user = await db.findOrCreateUser({ lineUserId, displayName, pictureUrl, phone });
+    const transactions = await db.getTransactionsByUser(user.id);
     return sendJson(res, 200, {
       success: true,
       data: { user, transactions }
@@ -165,13 +165,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      const result = db.addPoints({
+      const result = await db.addPoints({
         userId,
         amount: numericAmount,
         description
       });
 
-      const settings = db.getSettings();
+      const settings = await db.getSettings();
       lineService.sendEarnNotification({
         lineUserId: result.user.lineUserId,
         pointsEarned: result.pointsEarned,
@@ -192,7 +192,7 @@ const server = http.createServer(async (req, res) => {
 
   // 5. GET /api/rewards
   if (pathname === '/api/rewards' && method === 'GET') {
-    const rewards = db.getRewards();
+    const rewards = await db.getRewards();
     return sendJson(res, 200, { success: true, data: rewards });
   }
 
@@ -205,7 +205,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      const result = db.redeemReward({ userId, rewardId });
+      const result = await db.redeemReward({ userId, rewardId });
       lineService.sendRedeemNotification({
         lineUserId: result.user.lineUserId,
         rewardTitle: result.reward.title,
@@ -227,7 +227,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/admin/rewards' && method === 'POST') {
     const body = await parseBody(req);
     try {
-      const newReward = db.addReward(body);
+      const newReward = await db.addReward(body);
       return sendJson(res, 200, {
         success: true,
         message: 'เพิ่มของรางวัลสำเร็จ',
@@ -243,7 +243,7 @@ const server = http.createServer(async (req, res) => {
     const rewardId = pathname.replace('/api/admin/rewards/', '').trim();
     const body = await parseBody(req);
     try {
-      const updated = db.updateReward(rewardId, body);
+      const updated = await db.updateReward(rewardId, body);
       return sendJson(res, 200, {
         success: true,
         message: 'บันทึกการแก้ไขของรางวัลสำเร็จ',
@@ -258,7 +258,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname.startsWith('/api/admin/rewards/') && method === 'DELETE') {
     const rewardId = pathname.replace('/api/admin/rewards/', '').trim();
     try {
-      const deleted = db.deleteReward(rewardId);
+      const deleted = await db.deleteReward(rewardId);
       return sendJson(res, 200, {
         success: true,
         message: 'ลบของรางวัลสำเร็จ',
@@ -271,7 +271,7 @@ const server = http.createServer(async (req, res) => {
 
   // 7. GET /api/admin/members
   if (pathname === '/api/admin/members' && method === 'GET') {
-    const users = db.getUsers();
+    const users = await db.getUsers();
     return sendJson(res, 200, { success: true, data: users });
   }
 
@@ -279,7 +279,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname.startsWith('/api/admin/members/') && method === 'DELETE') {
     const memberId = pathname.replace('/api/admin/members/', '').trim();
     try {
-      const deleted = db.deleteUser(memberId);
+      const deleted = await db.deleteUser(memberId);
       return sendJson(res, 200, {
         success: true,
         message: `ลบสมาชิก ${deleted.displayName} (${deleted.id}) ออกจากระบบสำเร็จ`,
@@ -292,7 +292,7 @@ const server = http.createServer(async (req, res) => {
 
   // 8. GET /api/admin/transactions
   if (pathname === '/api/admin/transactions' && method === 'GET') {
-    const txns = db.getAllTransactions();
+    const txns = await db.getAllTransactions();
     return sendJson(res, 200, { success: true, data: txns });
   }
 

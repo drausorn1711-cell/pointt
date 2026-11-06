@@ -4,6 +4,10 @@ const path = require('path');
 const LOCAL_DB_DIR = path.join(__dirname, 'data');
 const LOCAL_DB_FILE = path.join(LOCAL_DB_DIR, 'db.json');
 
+// Upstash Redis Cloud Database (สำหรับแก้ปัญหาแต้มหายบน Vercel)
+const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || '').replace(/\/$/, '');
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || '';
+
 // Initial schema
 const defaultData = {
   users: [],
@@ -14,7 +18,7 @@ const defaultData = {
       title: 'ส่วนลด 50 บาท',
       pointsRequired: 100,
       description: 'ใช้เป็นส่วนลดสำหรับยอดซื้อขั้นต่ำ 200 บาท',
-      imageUrl: 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=400&fit=crop',
+      imageUrl: '',
       stock: 50
     },
     {
@@ -38,6 +42,7 @@ const defaultData = {
     pointsPerBaht: 1, // 1 บาท = 1 แต้ม
     minSpendForPoints: 1,
     shopName: 'น้ำพริกแม่เฉลา',
+    liffId: '2012420035-F8twisdh',
     tiers: [
       { name: 'Member', minSpend: 0 },
       { name: 'Silver', minSpend: 1000 },
@@ -52,7 +57,6 @@ let resolvedDbFile = null;
 function getDbFile() {
   if (resolvedDbFile) return resolvedDbFile;
 
-  // ตรวจจับ Vercel / AWS Lambda Serverless read-only environment
   const isServerless = Boolean(
     process.env.VERCEL || 
     process.env.AWS_LAMBDA_FUNCTION_NAME || 
@@ -77,7 +81,6 @@ function getDbFile() {
     return resolvedDbFile;
   }
 
-  // เครื่อง Local ปกติ (Windows / Linux)
   try {
     if (!fs.existsSync(LOCAL_DB_DIR)) {
       fs.mkdirSync(LOCAL_DB_DIR, { recursive: true });
@@ -97,7 +100,43 @@ function getDbFile() {
   return resolvedDbFile;
 }
 
-function readDb() {
+// ยิงคำสั่งไปที่ Cloud Database (Upstash Redis REST)
+async function queryUpstash(commandArray) {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) return null;
+  const res = await fetch(UPSTASH_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${UPSTASH_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(commandArray),
+    cache: 'no-store'
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Upstash error (${res.status}): ${errText}`);
+  }
+  const json = await res.json();
+  return json.result;
+}
+
+async function readDb() {
+  // 1. ถ้ามีการตั้งค่า Cloud Database (Upstash) ให้ดึงจาก Cloud ส่วนกลาง
+  if (UPSTASH_URL && UPSTASH_TOKEN) {
+    try {
+      const raw = await queryUpstash(['GET', 'point_db']);
+      if (raw) {
+        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+      }
+      // ถ้ายังไม่มีข้อมูลใน Cloud ให้เริ่มต้นด้วย defaultData
+      await queryUpstash(['SET', 'point_db', JSON.stringify(defaultData)]);
+      return defaultData;
+    } catch (err) {
+      console.error('[DATABASE] Upstash read failed, falling back to local:', err.message);
+    }
+  }
+
+  // 2. ถ้าไม่ได้ตั้งค่า Cloud ให้ใช้ไฟล์เครื่อง /tmp (สำหรับทดสอบในเครื่อง)
   const file = getDbFile();
   try {
     const raw = fs.readFileSync(file, 'utf-8');
@@ -113,50 +152,61 @@ function readDb() {
   }
 }
 
-function writeDb(data) {
-  let file = getDbFile();
+async function writeDb(data) {
+  // บันทึกลง local file เสมอเพื่อเป็น backup
   try {
+    const file = getDbFile();
     fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    // ถ้าเจอ EROFS (Read-only บน Vercel) ให้สลับไปใช้ /tmp ทันที
     if (err.code === 'EROFS' || (err.message && err.message.includes('read-only'))) {
-      const tmpFile = path.join('/tmp', 'db.json');
-      resolvedDbFile = tmpFile;
-      fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
-    } else {
-      throw err;
+      try {
+        const tmpFile = path.join('/tmp', 'db.json');
+        resolvedDbFile = tmpFile;
+        fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
+      } catch (e) {}
+    }
+  }
+
+  // บันทึกลง Cloud Database (Upstash) เพื่อให้ข้อมูลคงอยู่ถาวร และแชร์กันทุกเครื่อง
+  if (UPSTASH_URL && UPSTASH_TOKEN) {
+    try {
+      await queryUpstash(['SET', 'point_db', JSON.stringify(data)]);
+    } catch (err) {
+      console.error('[DATABASE] Upstash write failed:', err.message);
     }
   }
 }
 
 // Database helper operations
 const db = {
-  getSettings() {
-    return readDb().settings;
-  },
-
-  updateSettings(newSettings) {
-    const data = readDb();
-    data.settings = { ...data.settings, ...newSettings };
-    writeDb(data);
+  async getSettings() {
+    const data = await readDb();
     return data.settings;
   },
 
-  getUsers() {
-    return readDb().users;
+  async updateSettings(newSettings) {
+    const data = await readDb();
+    data.settings = { ...data.settings, ...newSettings };
+    await writeDb(data);
+    return data.settings;
   },
 
-  getUserById(idOrLineUserIdOrPhone) {
-    const users = readDb().users;
-    return users.find(
+  async getUsers() {
+    const data = await readDb();
+    return data.users;
+  },
+
+  async getUserById(idOrLineUserIdOrPhone) {
+    const data = await readDb();
+    return data.users.find(
       u => u.id === idOrLineUserIdOrPhone ||
            u.lineUserId === idOrLineUserIdOrPhone ||
            (u.phone && u.phone === idOrLineUserIdOrPhone)
     );
   },
 
-  findOrCreateUser({ lineUserId, displayName, pictureUrl, phone }) {
-    const data = readDb();
+  async findOrCreateUser({ lineUserId, displayName, pictureUrl, phone }) {
+    const data = await readDb();
     let user = data.users.find(u => (lineUserId && u.lineUserId === lineUserId) || (phone && u.phone === phone));
 
     if (user) {
@@ -173,7 +223,7 @@ const db = {
         user.phone = phone;
         changed = true;
       }
-      if (changed) writeDb(data);
+      if (changed) await writeDb(data);
       return user;
     }
 
@@ -191,7 +241,7 @@ const db = {
       createdAt: new Date().toISOString()
     };
     data.users.push(user);
-    writeDb(data);
+    await writeDb(data);
     return user;
   },
 
@@ -205,8 +255,8 @@ const db = {
     return 'Member';
   },
 
-  addPoints({ userId, amount, description = 'ซื้อสินค้า' }) {
-    const data = readDb();
+  async addPoints({ userId, amount, description = 'ซื้อสินค้า' }) {
+    const data = await readDb();
     const userIndex = data.users.findIndex(
       u => u.id === userId || u.lineUserId === userId || u.phone === userId
     );
@@ -241,13 +291,13 @@ const db = {
     };
 
     data.transactions.unshift(transaction);
-    writeDb(data);
+    await writeDb(data);
 
     return { user, transaction, pointsEarned };
   },
 
-  redeemReward({ userId, rewardId }) {
-    const data = readDb();
+  async redeemReward({ userId, rewardId }) {
+    const data = await readDb();
     const userIndex = data.users.findIndex(
       u => u.id === userId || u.lineUserId === userId
     );
@@ -286,43 +336,44 @@ const db = {
     };
 
     data.transactions.unshift(transaction);
-    writeDb(data);
+    await writeDb(data);
 
     return { user, transaction, reward };
   },
 
-  getTransactionsByUser(userId) {
-    const data = readDb();
+  async getTransactionsByUser(userId) {
+    const data = await readDb();
     return data.transactions.filter(t => t.userId === userId);
   },
 
-  getAllTransactions(limit = 50) {
-    const data = readDb();
+  async getAllTransactions(limit = 50) {
+    const data = await readDb();
     return data.transactions.slice(0, limit);
   },
 
-  getRewards() {
-    return readDb().rewards;
+  async getRewards() {
+    const data = await readDb();
+    return data.rewards;
   },
 
-  addReward({ title, pointsRequired, description, imageUrl, stock }) {
-    const data = readDb();
+  async addReward({ title, pointsRequired, description, imageUrl, stock }) {
+    const data = await readDb();
     const id = `REW-${Date.now()}`;
     const newReward = {
       id,
       title: title || 'ของรางวัลใหม่',
       pointsRequired: Number(pointsRequired) || 10,
       description: description || '',
-      imageUrl: imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop',
+      imageUrl: imageUrl || '',
       stock: Number(stock) || 10
     };
     data.rewards.push(newReward);
-    writeDb(data);
+    await writeDb(data);
     return newReward;
   },
 
-  updateReward(id, updatedFields) {
-    const data = readDb();
+  async updateReward(id, updatedFields) {
+    const data = await readDb();
     const idx = data.rewards.findIndex(r => r.id === id);
     if (idx === -1) {
       throw new Error('ไม่พบของรางวัลที่ต้องการแก้ไข');
@@ -333,31 +384,30 @@ const db = {
       pointsRequired: Number(updatedFields.pointsRequired ?? data.rewards[idx].pointsRequired),
       stock: Number(updatedFields.stock ?? data.rewards[idx].stock)
     };
-    writeDb(data);
+    await writeDb(data);
     return data.rewards[idx];
   },
 
-  deleteReward(id) {
-    const data = readDb();
+  async deleteReward(id) {
+    const data = await readDb();
     const idx = data.rewards.findIndex(r => r.id === id);
     if (idx === -1) {
       throw new Error('ไม่พบของรางวัลที่ต้องการลบ');
     }
     const deleted = data.rewards.splice(idx, 1)[0];
-    writeDb(data);
+    await writeDb(data);
     return deleted;
   },
 
-  deleteUser(id) {
-    const data = readDb();
+  async deleteUser(id) {
+    const data = await readDb();
     const idx = data.users.findIndex(u => u.id === id || u.lineUserId === id);
     if (idx === -1) {
       throw new Error('ไม่พบข้อมูลสมาชิกที่ต้องการลบ');
     }
     const deletedUser = data.users.splice(idx, 1)[0];
-    // ลบประวัติทำรายการของสมาชิกคนนี้ด้วย เพื่อความสะอาดของข้อมูล
     data.transactions = (data.transactions || []).filter(t => t.userId !== deletedUser.id);
-    writeDb(data);
+    await writeDb(data);
     return deletedUser;
   }
 };
