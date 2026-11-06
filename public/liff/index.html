@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>บัตรสมาชิกสะสมแต้ม</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+    .card-gradient-gold {
+      background: linear-gradient(135deg, #7a0c1e 0%, #4c0612 50%, #290309 100%);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-20">
+
+  <!-- Loading State Screen -->
+  <div id="loadingScreen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center p-6 space-y-4">
+    <div class="w-12 h-12 border-4 border-[#7a0c1e] border-t-transparent rounded-full animate-spin"></div>
+    <div class="text-center">
+      <h3 class="font-bold text-slate-800 text-base">กำลังโหลดบัตรสมาชิก...</h3>
+      <p class="text-xs text-slate-400 mt-1">กำลังเชื่อมต่อข้อมูลกับ LINE Official Account</p>
+    </div>
+  </div>
+
+  <!-- Error / Missing Config Screen -->
+  <div id="errorScreen" class="fixed inset-0 bg-white z-40 hidden flex flex-col items-center justify-center p-6 text-center space-y-4">
+    <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center">
+      <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+    </div>
+    <div>
+      <h3 class="font-bold text-slate-800 text-lg" id="errorTitle">ไม่สามารถเปิดบัตรสมาชิกได้</h3>
+      <p class="text-xs text-slate-500 mt-2 max-w-xs mx-auto leading-relaxed" id="errorDesc">
+        กรุณาเปิดผ่านลิงก์ใน LINE Official Account ของทางร้าน
+      </p>
+    </div>
+    <button onclick="location.reload()" class="bg-slate-900 text-white text-xs font-semibold px-6 py-2.5 rounded-xl">
+      ลองใหม่อีกครั้ง
+    </button>
+  </div>
+
+  <div id="mainApp" class="max-w-md mx-auto p-4 space-y-4 hidden">
+    <!-- Header -->
+    <div class="flex items-center justify-between py-2">
+      <div class="flex items-center space-x-3">
+        <img id="userAvatar" src="https://via.placeholder.com/100" 
+             class="w-12 h-12 rounded-full border-2 border-[#7a0c1e] object-cover shadow-sm" alt="Avatar">
+        <div>
+          <h1 id="userName" class="font-bold text-lg text-slate-900 leading-tight">-</h1>
+          <p id="userPhone" class="text-xs text-slate-500">สมาชิกคนสำคัญ</p>
+        </div>
+      </div>
+      <button onclick="refreshUserData()" class="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition" title="รีเฟรชแต้ม">
+        <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Membership Card -->
+    <div class="card-gradient-gold rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+      <!-- Decorative background blur -->
+      <div class="absolute -right-8 -top-8 w-36 h-36 bg-rose-500/25 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="absolute -left-8 -bottom-8 w-36 h-36 bg-amber-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="flex justify-between items-start relative z-10">
+        <div>
+          <span class="text-xs font-semibold tracking-wider uppercase text-rose-200 bg-rose-950/70 px-3 py-1 rounded-full border border-rose-400/30" id="cardTier">
+            Member
+          </span>
+          <p class="text-xs text-rose-200 mt-2">ยอดสะสม (1 บาท = 1 แต้ม)</p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-rose-200 font-medium" id="shopName">My Shop</span>
+        </div>
+      </div>
+
+      <!-- Point Counter -->
+      <div class="my-6 text-center relative z-10">
+        <span class="text-xs text-rose-200">แต้มคงเหลือของคุณ</span>
+        <div class="flex items-center justify-center space-x-2 mt-1">
+          <span id="userPoints" class="text-5xl font-black tracking-tight text-white">0</span>
+          <span class="text-amber-300 font-bold text-lg">แต้ม</span>
+        </div>
+      </div>
+
+      <!-- Member Code & QR Toggle -->
+      <div class="pt-4 border-t border-rose-900/60 flex justify-between items-center relative z-10">
+        <div>
+          <p class="text-[10px] text-rose-300 uppercase tracking-widest">รหัสสมาชิก</p>
+          <p id="memberId" class="text-sm font-mono font-bold tracking-wider text-white">MEM-0000</p>
+        </div>
+        <button onclick="openQrModal()" class="flex items-center space-x-1.5 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow transition">
+          <i data-lucide="qr-code" class="w-4 h-4"></i>
+          <span>สแกนรับแต้ม</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Action / Status Bar -->
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-[#7a0c1e]">
+          <i data-lucide="coins" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500">ยอดซื้อสะสมทั้งหมด</p>
+          <p id="totalSpent" class="font-bold text-slate-800">฿0</p>
+        </div>
+      </div>
+      <div class="text-right">
+        <span class="text-xs bg-rose-100 text-[#7a0c1e] font-semibold px-2.5 py-1 rounded-lg">1 บ. = 1 แต้ม</span>
+      </div>
+    </div>
+
+    <!-- Tabs: ของรางวัล vs ประวัติ -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-2 flex space-x-1">
+      <button id="tabRewardsBtn" onclick="switchTab('rewards')" 
+              class="flex-1 py-2 text-sm font-semibold rounded-xl transition bg-[#7a0c1e] text-white flex justify-center items-center space-x-1.5">
+        <i data-lucide="gift" class="w-4 h-4"></i>
+        <span>แลกของรางวัล</span>
+      </button>
+      <button id="tabHistoryBtn" onclick="switchTab('history')" 
+              class="flex-1 py-2 text-sm font-semibold rounded-xl transition text-slate-600 hover:bg-slate-50 flex justify-center items-center space-x-1.5">
+        <i data-lucide="history" class="w-4 h-4"></i>
+        <span>ประวัติสะสมแต้ม</span>
+      </button>
+    </div>
+
+    <!-- Tab Content: Rewards -->
+    <div id="tabRewards" class="space-y-3">
+      <div id="rewardsList" class="space-y-3"></div>
+    </div>
+
+    <!-- Tab Content: History -->
+    <div id="tabHistory" class="hidden space-y-3">
+      <div id="historyList" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- QR Code Modal (for Cashier to scan) -->
+  <div id="qrModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-slate-800 text-lg">QR Code สมาชิก</h3>
+        <button onclick="closeQrModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">ยื่นให้พนักงานสแกน เพื่อสะสมแต้มตามยอดซื้อ (1 บาท = 1 แต้ม)</p>
+
+      <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 inline-block">
+        <div id="qrcodeCanvas" class="mx-auto flex justify-center"></div>
+      </div>
+
+      <div>
+        <p class="text-xs text-slate-400">รหัสสมาชิก</p>
+        <p id="modalMemberId" class="text-xl font-mono font-bold text-slate-800 tracking-wider">MEM-0000</p>
+      </div>
+
+      <button onclick="closeQrModal()" class="w-full bg-slate-900 text-white font-semibold py-3 rounded-2xl">
+        ปิดหน้าต่าง
+      </button>
+    </div>
+  </div>
+
+  <!-- Redeemed Reward Coupon Modal -->
+  <div id="couponModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div class="w-16 h-16 bg-rose-100 text-[#7a0c1e] rounded-full flex items-center justify-center mx-auto text-2xl">
+        🎉
+      </div>
+      <div>
+        <h3 class="font-bold text-xl text-slate-800">แลกของรางวัลสำเร็จ!</h3>
+        <p class="text-xs text-slate-500 mt-1">ยื่นหน้าจอนี้ให้พนักงานร้านน้ำพริกแม่เฉลาเพื่อรับของรางวัล</p>
+      </div>
+
+      <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 text-center space-y-2">
+        <span class="text-[10px] font-bold text-amber-800 uppercase tracking-widest bg-amber-200/60 px-2.5 py-0.5 rounded-full">คูปองแลกรับรางวัล</span>
+        <h4 id="couponTitle" class="font-bold text-slate-900 text-base leading-tight pt-1">-</h4>
+        <div class="py-2 border-y border-dashed border-amber-300 my-2">
+          <p class="text-[10px] text-slate-400">รหัสคูปอง</p>
+          <p id="couponCode" class="font-mono text-xl font-black text-amber-700 tracking-wider">CPN-0000</p>
+        </div>
+        <p class="text-[11px] text-amber-900 font-medium">ใช้ไป <span id="couponPoints">-0</span> แต้ม</p>
+      </div>
+
+      <button onclick="closeCouponModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-2xl transition">
+        รับทราบ / ปิดหน้าต่าง
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let liffId = '';
+
+    async function initApp() {
+      lucide.createIcons();
+
+      // 1. ดึงการตั้งค่าร้านค้า & LIFF ID จากเซิร์ฟเวอร์
+      try {
+        const res = await fetch('/api/settings');
+        const json = await res.json();
+        if (json.success) {
+          liffId = json.data.liffId;
+          document.getElementById('shopName').innerText = json.data.shopName || 'LINE Shop';
+        }
+      } catch (e) {
+        showError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'กรุณาตรวจสอบว่าเซิร์ฟเวอร์เปิดทำงานอยู่');
+        return;
+      }
+
+      // 2. ตรวจสอบ LIFF ID
+      if (!liffId) {
+        liffId = '2012400848-86Z8gVyN';
+      }
+
+      // 3. เริ่มต้น LINE LIFF
+      try {
+        await liff.init({ liffId });
+
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+
+        // ดึงโปรไฟล์ LINE จริงของลูกค้า
+        const profile = await liff.getProfile();
+        await syncUser(profile);
+      } catch (err) {
+        console.error('LIFF Error:', err);
+        showError('เกิดข้อผิดพลาดในการโหลด LIFF', err.message);
+      }
+    }
+
+    async function syncUser(profile) {
+      try {
+        const res = await fetch('/api/user/sync-liff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lineUserId: profile.userId,
+            displayName: profile.displayName,
+            pictureUrl: profile.pictureUrl
+          })
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          currentUser = json.data.user;
+          renderUser(json.data.user, json.data.transactions);
+          loadRewards();
+
+          // ซ่อนหน้าโหลด แสดงหน้าบัตรจริง
+          document.getElementById('loadingScreen').classList.add('hidden');
+          document.getElementById('mainApp').classList.remove('hidden');
+        } else {
+          showError('ไม่สามารถซิงค์ข้อมูลได้', json.message);
+        }
+      } catch (e) {
+        showError('เกิดข้อผิดพลาด', e.message);
+      }
+    }
+
+    async function refreshUserData() {
+      if (!currentUser) return;
+      try {
+        const res = await fetch(`/api/user/${currentUser.id}`);
+        const json = await res.json();
+        if (json.success) {
+          currentUser = json.data.user;
+          renderUser(json.data.user, json.data.transactions);
+          loadRewards();
+        }
+      } catch (e) {
+        console.error('Refresh error:', e);
+      }
+    }
+
+    function renderUser(user, transactions) {
+      document.getElementById('userName').innerText = user.displayName;
+      document.getElementById('userPhone').innerText = user.phone ? `เบอร์ ${user.phone}` : `รหัสสมาชิก: ${user.id}`;
+      if (user.pictureUrl) {
+        document.getElementById('userAvatar').src = user.pictureUrl;
+      }
+      document.getElementById('userPoints').innerText = Number(user.points).toLocaleString();
+      document.getElementById('cardTier').innerText = `${user.tier || 'Member'} Member`;
+      document.getElementById('memberId').innerText = user.id;
+      document.getElementById('modalMemberId').innerText = user.id;
+      document.getElementById('totalSpent').innerText = `฿${Number(user.totalSpent || 0).toLocaleString()}`;
+
+      // Generate Personal Member QR Code
+      const qrContainer = document.getElementById('qrcodeCanvas');
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: user.id,
+        width: 180,
+        height: 180,
+        colorDark: "#0f172a",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      renderHistory(transactions || []);
+      lucide.createIcons();
+    }
+
+    function renderHistory(txns) {
+      const list = document.getElementById('historyList');
+      if (!txns || txns.length === 0) {
+        list.innerHTML = `
+          <div class="text-center py-8 text-slate-400 bg-white rounded-2xl border border-slate-100">
+            <i data-lucide="receipt" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+            <p class="text-sm">ยังไม่มีประวัติการทำรายการ</p>
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = txns.map(t => {
+        const isEarn = t.type === 'EARN';
+        const dateStr = new Date(t.createdAt).toLocaleDateString('th-TH', {
+          day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+
+        return `
+          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl ${isEarn ? 'bg-rose-50 text-[#7a0c1e]' : 'bg-slate-100 text-slate-600'} flex items-center justify-center font-bold">
+                <i data-lucide="${isEarn ? 'arrow-down-left' : 'gift'}" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="font-semibold text-sm text-slate-800">${t.description}</p>
+                <p class="text-[11px] text-slate-400">${dateStr}</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="font-bold text-sm ${isEarn ? 'text-[#7a0c1e]' : 'text-slate-500'}">
+                ${isEarn ? '+' : ''}${t.points.toLocaleString()} แต้ม
+              </p>
+              <p class="text-[10px] text-slate-400">คงเหลือ ${t.balanceAfter} แต้ม</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadRewards() {
+      try {
+        const res = await fetch('/api/rewards');
+        const json = await res.json();
+        if (json.success) {
+          const list = document.getElementById('rewardsList');
+          if (!json.data || json.data.length === 0) {
+            list.innerHTML = `
+              <div class="text-center py-8 text-slate-400 bg-white rounded-2xl border border-slate-100">
+                <i data-lucide="gift" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                <p class="text-sm">กำลังเตรียมของรางวัลเร็วๆ นี้</p>
+              </div>
+            `;
+            lucide.createIcons();
+            return;
+          }
+
+          list.innerHTML = json.data.map(r => {
+            const userPoints = currentUser ? Number(currentUser.points || 0) : 0;
+            const canRedeem = userPoints >= r.pointsRequired && r.stock > 0;
+            const pointDiff = r.pointsRequired - userPoints;
+
+            let btnText = 'กดแลกของรางวัล';
+            let btnClass = 'bg-[#7a0c1e] hover:bg-[#630917] text-white active:scale-95 shadow shadow-rose-950/20';
+
+            if (r.stock <= 0) {
+              btnText = 'ของรางวัลหมด';
+              btnClass = 'bg-slate-100 text-slate-400 cursor-not-allowed';
+            } else if (!canRedeem) {
+              btnText = `ขาดอีก ${pointDiff.toLocaleString()} แต้ม`;
+              btnClass = 'bg-slate-100 text-slate-400 cursor-not-allowed';
+            }
+
+            return `
+              <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 flex flex-col">
+                <div class="relative">
+                  <img src="${r.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop'}" 
+                       alt="${r.title}" class="w-full h-36 object-cover">
+                  <div class="absolute top-2 right-2">
+                    <span class="bg-slate-900/80 backdrop-blur-md text-amber-300 text-xs font-bold px-3 py-1 rounded-full border border-amber-400/30 shadow">
+                      ⭐ ${r.pointsRequired.toLocaleString()} แต้ม
+                    </span>
+                  </div>
+                </div>
+                <div class="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h4 class="font-bold text-slate-800 text-sm leading-tight">${r.title}</h4>
+                    <p class="text-xs text-slate-500 mt-1">${r.description || ''}</p>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-[11px] text-slate-400">คงเหลือ ${r.stock} ชิ้น</span>
+                    <button onclick="redeemReward('${r.id}', '${r.title}', ${r.pointsRequired})" 
+                            ${!canRedeem ? 'disabled' : ''}
+                            class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1 ${btnClass}">
+                      <i data-lucide="gift" class="w-3.5 h-3.5"></i>
+                      <span>${btnText}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+          lucide.createIcons();
+        }
+      } catch (e) {
+        console.error('Failed to load rewards:', e);
+      }
+    }
+
+    async function redeemReward(rewardId, rewardTitle, pointsReq) {
+      if (!confirm(`ยืนยันการใช้ ${pointsReq} แต้ม เพื่อแลก "${rewardTitle}"?`)) return;
+      try {
+        const res = await fetch('/api/rewards/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUser.id, rewardId })
+        });
+        const json = await res.json();
+        if (json.success) {
+          // Show Coupon Modal
+          document.getElementById('couponTitle').innerText = rewardTitle;
+          document.getElementById('couponCode').innerText = `CPN-${Date.now().toString().slice(-6)}`;
+          document.getElementById('couponPoints').innerText = `-${pointsReq}`;
+          document.getElementById('couponModal').classList.remove('hidden');
+
+          refreshUserData();
+        } else {
+          alert('ไม่สามารถแลกได้: ' + json.message);
+        }
+      } catch (e) {
+        alert('เกิดข้อผิดพลาด: ' + e.message);
+      }
+    }
+
+    function closeCouponModal() {
+      document.getElementById('couponModal').classList.add('hidden');
+    }
+
+    function switchTab(tab) {
+      const rewardsTab = document.getElementById('tabRewards');
+      const historyTab = document.getElementById('tabHistory');
+      const tabRewardsBtn = document.getElementById('tabRewardsBtn');
+      const tabHistoryBtn = document.getElementById('tabHistoryBtn');
+
+      if (tab === 'rewards') {
+        rewardsTab.classList.remove('hidden');
+        historyTab.classList.add('hidden');
+        tabRewardsBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-xl transition bg-[#7a0c1e] text-white flex justify-center items-center space-x-1.5';
+        tabHistoryBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-xl transition text-slate-600 hover:bg-slate-50 flex justify-center items-center space-x-1.5';
+      } else {
+        rewardsTab.classList.add('hidden');
+        historyTab.classList.remove('hidden');
+        tabRewardsBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-xl transition text-slate-600 hover:bg-slate-50 flex justify-center items-center space-x-1.5';
+        tabHistoryBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-xl transition bg-[#7a0c1e] text-white flex justify-center items-center space-x-1.5';
+      }
+      lucide.createIcons();
+    }
+
+    function openQrModal() {
+      document.getElementById('qrModal').classList.remove('hidden');
+    }
+
+    function closeQrModal() {
+      document.getElementById('qrModal').classList.add('hidden');
+    }
+
+    function showError(title, desc) {
+      document.getElementById('loadingScreen').classList.add('hidden');
+      document.getElementById('errorTitle').innerText = title;
+      document.getElementById('errorDesc').innerText = desc;
+      document.getElementById('errorScreen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    // Start App
+    initApp();
+  </script>
+</body>
+</html>

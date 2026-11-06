@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบบริหารจัดการแต้มสะสม LINE OA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-20">
+
+  <!-- Header Banner -->
+  <header class="bg-slate-900 text-white border-b border-slate-800">
+    <div class="max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-12 h-12 rounded-2xl bg-[#7a0c1e] flex items-center justify-center font-black text-2xl text-white shadow-lg shadow-rose-950/30">
+          ฿
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl font-bold tracking-tight">ระบบบริหารจัดการแต้มสะสม LINE OA</h1>
+            <span class="bg-rose-950/80 text-rose-300 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-rose-800/40">1 บาท = 1 แต้ม</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5" id="shopSubTitle">ระบบจัดการสมาชิก แต้มสะสม และประวัติการทำรายการ</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <a href="/cashier/" target="_blank" class="bg-[#7a0c1e] hover:bg-[#630917] text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow transition">
+          <i data-lucide="store" class="w-4 h-4"></i>
+          <span>เปิดหน้าจอแคชเชียร์หน้าร้าน</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+    <!-- Overview Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center space-x-4">
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <i data-lucide="users" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">สมาชิกทั้งหมด</p>
+          <p id="statMembers" class="text-2xl font-black text-slate-900 mt-0.5">0 คน</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center space-x-4">
+        <div class="w-12 h-12 rounded-2xl bg-rose-50 text-[#7a0c1e] flex items-center justify-center">
+          <i data-lucide="coins" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">แต้มสะสมคงเหลือในระบบ</p>
+          <p id="statPoints" class="text-2xl font-black text-[#7a0c1e] mt-0.5">0 แต้ม</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex items-center space-x-4">
+        <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+          <i data-lucide="banknote" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">ยอดซื้อรวมผ่านระบบ</p>
+          <p id="statSpent" class="text-2xl font-black text-slate-900 mt-0.5">฿0</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIFF Link Banner for Rich Menu -->
+    <div class="bg-gradient-to-r from-[#7a0c1e] via-[#630917] to-[#42040d] rounded-3xl p-6 text-white shadow-lg shadow-rose-950/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="smartphone" class="w-5 h-5 text-amber-300"></i>
+          <h3 class="font-bold text-base">ลิงก์บัตรสมาชิก LIFF สำหรับใส่ใน Rich Menu LINE OA</h3>
+        </div>
+        <p class="text-xs text-rose-200">นำลิงก์นี้ไปผูกกับปุ่ม "บัตรสมาชิก / เช็คแต้ม" ใน LINE Official Account Manager</p>
+      </div>
+      <div class="flex items-center space-x-2 bg-black/40 p-2 rounded-2xl border border-rose-400/30">
+        <code id="liffUrlCode" class="text-xs font-mono px-3 text-rose-200 select-all">https://liff.line.me/2012400848-86Z8gVyN</code>
+        <button onclick="copyLiffUrl()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>คัดลอก</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Rewards Action Banner -->
+    <div class="bg-gradient-to-r from-[#8b1528] via-[#680a19] to-[#42040d] rounded-3xl p-6 text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="gift" class="w-6 h-6 text-amber-300"></i>
+          <h3 class="font-bold text-lg">จัดการของรางวัลสะสมแต้ม (Reward Catalog)</h3>
+        </div>
+        <p class="text-xs text-rose-100">แก้ไขแต้มที่ใช้แลก เติมสต็อก หรือเพิ่มของรางวัลใหม่ของร้านน้ำพริกแม่เฉลา</p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="openRewardModal()" class="bg-white text-slate-900 hover:bg-rose-50 font-bold px-4 py-2.5 rounded-xl text-xs transition shadow flex items-center space-x-1.5">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-[#7a0c1e]"></i>
+          <span>+ เพิ่มของรางวัลใหม่</span>
+        </button>
+        <button onclick="openRewardsListModal()" class="bg-black/30 hover:bg-black/50 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition border border-rose-300/30 flex items-center space-x-1">
+          <i data-lucide="eye" class="w-4 h-4"></i>
+          <span>ดูและแก้ไขของรางวัลทั้งหมด</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Members Table -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+            <i data-lucide="user-check" class="w-5 h-5 text-[#7a0c1e]"></i>
+            <span>รายชื่อสมาชิกร้านค้า</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">ข้อมูลสมาชิกที่เปิดบัตรผ่าน LINE OA</p>
+        </div>
+        <button onclick="loadDashboardData()" class="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="text-slate-400 border-b border-slate-100">
+              <th class="py-3 px-4">รหัสสมาชิก</th>
+              <th class="py-3 px-4">ชื่อสมาชิก</th>
+              <th class="py-3 px-4">ระดับ (Tier)</th>
+              <th class="py-3 px-4 text-right">ยอดซื้อสะสม</th>
+              <th class="py-3 px-4 text-right">แต้มคงเหลือ</th>
+              <th class="py-3 px-4 text-center">วันที่สมัคร</th>
+              <th class="py-3 px-4 text-center">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="membersTableBody">
+            <tr>
+              <td colspan="7" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลสมาชิก</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent Transactions Table -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-4">
+      <div class="pb-3 border-b border-slate-100">
+        <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+          <i data-lucide="receipt" class="w-5 h-5 text-blue-600"></i>
+          <span>ประวัติการทำรายการล่าสุด</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-0.5">ประวัติการสะสมแต้มและการแลกของรางวัล</p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="text-slate-400 border-b border-slate-100">
+              <th class="py-3 px-4">รหัสบิล</th>
+              <th class="py-3 px-4">รหัสสมาชิก</th>
+              <th class="py-3 px-4">รายการ</th>
+              <th class="py-3 px-4 text-right">ยอดเงิน</th>
+              <th class="py-3 px-4 text-right">แต้ม</th>
+              <th class="py-3 px-4 text-right">คงเหลือ</th>
+              <th class="py-3 px-4 text-center">เวลา</th>
+            </tr>
+          </thead>
+          <tbody id="txnsTableBody">
+            <tr>
+              <td colspan="7" class="text-center py-8 text-slate-400">ยังไม่มีประวัติการทำรายการ</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- All Rewards Catalog Modal -->
+  <div id="rewardsListModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl animate-in fade-in zoom-in duration-150">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+            <i data-lucide="gift" class="w-5 h-5 text-amber-500"></i>
+            <span>คลังของรางวัล (Reward Catalog)</span>
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">รายการของรางวัลทั้งหมดของร้านน้ำพริกแม่เฉลา</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="openRewardModal()" class="bg-[#7a0c1e] hover:bg-[#630917] active:scale-95 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>เพิ่มรางวัลใหม่</span>
+          </button>
+          <button onclick="closeRewardsListModal()" class="text-slate-400 hover:text-slate-600 p-1">
+            <i data-lucide="x" class="w-6 h-6"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Rewards Grid inside Modal -->
+      <div id="rewardsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Reward Add / Edit Modal -->
+  <div id="rewardModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl animate-in fade-in zoom-in duration-150">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+        <h3 id="modalTitle" class="font-bold text-slate-800 text-base">เพิ่มของรางวัลใหม่</h3>
+        <button onclick="closeRewardModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="rewardForm" onsubmit="saveReward(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="rwId">
+
+        <div class="space-y-1">
+          <label class="font-semibold text-slate-700">ชื่อของรางวัล <span class="text-rose-500">*</span></label>
+          <input type="text" id="rwTitle" required placeholder="เช่น ฟรี! น้ำพริกกระปุกเล็ก 1 กระปุก, ส่วนลด 50 บาท"
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#7a0c1e]">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label class="font-semibold text-slate-700">แต้มที่ต้องใช้ <span class="text-rose-500">*</span></label>
+            <input type="number" id="rwPoints" required min="1" placeholder="เช่น 50"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#7a0c1e] font-bold text-[#7a0c1e]">
+          </div>
+          <div class="space-y-1">
+            <label class="font-semibold text-slate-700">จำนวนสต็อก (ชิ้น) <span class="text-rose-500">*</span></label>
+            <input type="number" id="rwStock" required min="0" placeholder="เช่น 50"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#7a0c1e]">
+          </div>
+        </div>
+
+        <!-- Image Selection & Live Preview -->
+        <div class="space-y-2">
+          <label class="font-semibold text-slate-700 flex items-center justify-between">
+            <span>รูปภาพของรางวัล</span>
+            <span class="text-[10px] text-slate-400 font-normal">อัปโหลดจากเครื่อง หรือ ใส่อ้างอิงลิงก์</span>
+          </label>
+
+          <!-- Live Image Preview Box -->
+          <div class="relative w-full h-36 rounded-2xl overflow-hidden bg-slate-100 border-2 border-dashed border-slate-200 flex items-center justify-center">
+            <img id="rwImagePreview" src="" alt="พรีวิวรูปภาพ" 
+                 class="w-full h-full object-cover hidden"
+                 onerror="this.classList.add('hidden'); document.getElementById('rwImagePlaceholder').classList.remove('hidden');">
+            <div id="rwImagePlaceholder" class="text-center p-3 text-slate-400">
+              <i data-lucide="image" class="w-8 h-8 mx-auto mb-1 opacity-40"></i>
+              <p class="text-[11px]">ยังไม่มีรูปภาพ (กดเลือกไฟล์หรือใส่ลิงก์ด้านล่าง)</p>
+            </div>
+            <!-- Remove / Clear Image button -->
+            <button type="button" onclick="clearRewardImage()" id="rwClearImgBtn" 
+                    class="hidden absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-1 rounded-lg text-xs transition shadow" title="ล้างรูปภาพ">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Upload from device button & Hidden File Input -->
+          <div class="flex items-center space-x-2">
+            <input type="file" id="rwFileInput" accept="image/*" class="hidden" onchange="handleImageFileSelect(event)">
+            <button type="button" onclick="document.getElementById('rwFileInput').click()" 
+                    class="flex-1 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-[#7a0c1e] text-xs font-semibold flex items-center justify-center space-x-1.5 border border-rose-200 transition">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+              <span>📁 เลือกรูปภาพจากเครื่อง / มือถือ</span>
+            </button>
+          </div>
+
+          <!-- URL Input (Optional / Alternative) -->
+          <div class="space-y-1">
+            <div class="relative">
+              <i data-lucide="link" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
+              <input type="text" id="rwImage" placeholder="หรือวางลิงก์รูปภาพ (https://...)" oninput="handleImageUrlInput()"
+                     class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#7a0c1e] font-mono text-[11px] bg-slate-50 focus:bg-white transition">
+            </div>
+            
+            <!-- Quick Preset Images -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-1">
+              <span class="text-[10px] text-slate-400">รูปตัวอย่าง:</span>
+              <button type="button" onclick="setPresetImg('chili1')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] text-slate-600 transition">น้ำพริกกระปุก</button>
+              <button type="button" onclick="setPresetImg('chili2')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] text-slate-600 transition">เซ็ตน้ำพริก</button>
+              <button type="button" onclick="setPresetImg('discount20')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] text-slate-600 transition">ส่วนลด 20%</button>
+              <button type="button" onclick="setPresetImg('discount50')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] text-slate-600 transition">ส่วนลด 50฿</button>
+              <button type="button" onclick="setPresetImg('gift')" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] text-slate-600 transition">ของขวัญ</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-semibold text-slate-700">คำอธิบาย / เงื่อนไขการใช้</label>
+          <textarea id="rwDesc" rows="2" placeholder="เช่น ใช้เป็นส่วนลดเมื่อซื้อครบ 100 บาทขึ้นไป"
+                    class="w-full px-3.5 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#7a0c1e]"></textarea>
+        </div>
+
+        <div class="pt-2 flex space-x-2">
+          <button type="button" onclick="closeRewardModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition">
+            ยกเลิก
+          </button>
+          <button type="submit" id="saveRewardBtn" class="flex-1 py-2.5 rounded-xl bg-[#7a0c1e] hover:bg-[#630917] text-white font-bold transition shadow shadow-rose-950/20">
+            บันทึกของรางวัล
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let rewardsData = [];
+
+    async function init() {
+      lucide.createIcons();
+      await loadDashboardData();
+      await loadRewards();
+    }
+
+    async function loadRewards() {
+      try {
+        const res = await fetch('/api/rewards');
+        const json = await res.json();
+        if (json.success) {
+          rewardsData = json.data || [];
+          renderRewardsGrid(rewardsData);
+        }
+      } catch (e) {
+        console.error('Failed to load rewards:', e);
+      }
+    }
+
+    function renderRewardsGrid(rewards) {
+      const grid = document.getElementById('rewardsGrid');
+      if (!rewards || rewards.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-8 text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <i data-lucide="gift" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+            <p class="text-xs">ยังไม่มีของรางวัลในระบบ กดปุ่ม "เพิ่มของรางวัลใหม่" ด้านบนเพื่อเริ่มสร้าง</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      grid.innerHTML = rewards.map(r => {
+        return `
+          <div class="bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 flex flex-col justify-between hover:shadow-sm transition">
+            <div class="relative">
+              <img src="${r.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop'}" 
+                   class="w-full h-36 object-cover" alt="${r.title}">
+              <div class="absolute top-2 right-2 flex space-x-1">
+                <span class="bg-[#7a0c1e] text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow">
+                  ${Number(r.pointsRequired).toLocaleString()} แต้ม
+                </span>
+              </div>
+            </div>
+            <div class="p-4 flex-1 flex flex-col justify-between space-y-3">
+              <div>
+                <div class="flex justify-between items-start">
+                  <h4 class="font-bold text-slate-800 text-sm leading-tight">${r.title}</h4>
+                </div>
+                <p class="text-xs text-slate-500 mt-1 line-clamp-2">${r.description || 'ไม่มีคำอธิบาย'}</p>
+                <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                  <span>คงเหลือ: <strong class="text-slate-700">${r.stock}</strong> ชิ้น</span>
+                  <span class="font-mono text-[10px] text-slate-400">${r.id}</span>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-slate-200 flex space-x-2">
+                <button onclick="openEditRewardModal('${r.id}')" 
+                        class="flex-1 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center justify-center space-x-1 transition">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                  <span>แก้ไข</span>
+                </button>
+                <button onclick="deleteReward('${r.id}', '${r.title}')" 
+                        class="px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 text-xs font-semibold transition" title="ลบ">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function updateImagePreview(url) {
+      const preview = document.getElementById('rwImagePreview');
+      const placeholder = document.getElementById('rwImagePlaceholder');
+      const clearBtn = document.getElementById('rwClearImgBtn');
+
+      if (url && url.trim()) {
+        preview.src = url.trim();
+        preview.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        if (clearBtn) clearBtn.classList.remove('hidden');
+      } else {
+        preview.src = '';
+        preview.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        if (clearBtn) clearBtn.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    function clearRewardImage() {
+      document.getElementById('rwImage').value = '';
+      const fileInput = document.getElementById('rwFileInput');
+      if (fileInput) fileInput.value = '';
+      updateImagePreview('');
+    }
+
+    function handleImageUrlInput() {
+      const url = document.getElementById('rwImage').value.trim();
+      updateImagePreview(url);
+    }
+
+    function handleImageFileSelect(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        alert('กรุณาเลือกไฟล์ที่เป็นรูปภาพเท่านั้น');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          // ย่อขนาดรูปภาพไม่เกิน 600px เพื่อความรวดเร็วและประหยัดพื้นที่จัดเก็บ
+          const canvas = document.createElement('canvas');
+          const maxDim = 600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // แปลงเป็น DataURL คุณภาพ 82%
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          document.getElementById('rwImage').value = compressedDataUrl;
+          updateImagePreview(compressedDataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function openRewardModal() {
+      document.getElementById('modalTitle').innerText = 'เพิ่มของรางวัลใหม่';
+      document.getElementById('rwId').value = '';
+      document.getElementById('rwTitle').value = '';
+      document.getElementById('rwPoints').value = '50';
+      document.getElementById('rwStock').value = '50';
+      const defaultImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+      document.getElementById('rwImage').value = defaultImg;
+      document.getElementById('rwDesc').value = '';
+      const fileInput = document.getElementById('rwFileInput');
+      if (fileInput) fileInput.value = '';
+      updateImagePreview(defaultImg);
+      document.getElementById('rewardModal').classList.remove('hidden');
+    }
+
+    function openEditRewardModal(id) {
+      const reward = rewardsData.find(r => r.id === id);
+      if (!reward) return;
+
+      document.getElementById('modalTitle').innerText = 'แก้ไขของรางวัล';
+      document.getElementById('rwId').value = reward.id;
+      document.getElementById('rwTitle').value = reward.title;
+      document.getElementById('rwPoints').value = reward.pointsRequired;
+      document.getElementById('rwStock').value = reward.stock;
+      const imgUrl = reward.imageUrl || '';
+      document.getElementById('rwImage').value = imgUrl;
+      document.getElementById('rwDesc').value = reward.description || '';
+      const fileInput = document.getElementById('rwFileInput');
+      if (fileInput) fileInput.value = '';
+      updateImagePreview(imgUrl);
+      document.getElementById('rewardModal').classList.remove('hidden');
+    }
+
+    function closeRewardModal() {
+      document.getElementById('rewardModal').classList.add('hidden');
+    }
+
+    function openRewardsListModal() {
+      loadRewards();
+      document.getElementById('rewardsListModal').classList.remove('hidden');
+    }
+
+    function closeRewardsListModal() {
+      document.getElementById('rewardsListModal').classList.add('hidden');
+    }
+
+    function setPresetImg(type) {
+      let url = '';
+      if (type === 'chili1') {
+        url = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+      } else if (type === 'chili2') {
+        url = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&fit=crop';
+      } else if (type === 'discount20') {
+        url = 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&fit=crop';
+      } else if (type === 'discount50') {
+        url = 'https://images.unsplash.com/photo-1556740758-90de374c12ad?w=400&fit=crop';
+      } else if (type === 'gift') {
+        url = 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&fit=crop';
+      }
+      if (url) {
+        document.getElementById('rwImage').value = url;
+        const fileInput = document.getElementById('rwFileInput');
+        if (fileInput) fileInput.value = '';
+        updateImagePreview(url);
+      }
+    }
+
+    async function saveReward(e) {
+      e.preventDefault();
+      const id = document.getElementById('rwId').value.trim();
+      const title = document.getElementById('rwTitle').value.trim();
+      const points = parseInt(document.getElementById('rwPoints').value);
+      const stock = parseInt(document.getElementById('rwStock').value);
+      const image = document.getElementById('rwImage').value.trim();
+      const desc = document.getElementById('rwDesc').value.trim();
+
+      const btn = document.getElementById('saveRewardBtn');
+      btn.disabled = true;
+
+      const payload = {
+        title,
+        pointsRequired: points,
+        stock,
+        imageUrl: image,
+        description: desc
+      };
+
+      try {
+        const url = id ? `/api/admin/rewards/${id}` : '/api/admin/rewards';
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          closeRewardModal();
+          await loadRewards();
+          alert(json.message);
+        } else {
+          alert('เกิดข้อผิดพลาด: ' + json.message);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function deleteReward(id, title) {
+      if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบของรางวัล "${title}"?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/rewards/${id}`, {
+          method: 'DELETE'
+        });
+        const json = await res.json();
+        if (json.success) {
+          await loadRewards();
+          alert(json.message);
+        } else {
+          alert('ลบไม่สำเร็จ: ' + json.message);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+      }
+    }
+
+    async function deleteMember(id, name) {
+      if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบสมาชิก "${name}" (${id}) ออกจากระบบ?`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/members/${id}`, {
+          method: 'DELETE'
+        });
+        const json = await res.json();
+        if (json.success) {
+          await loadDashboardData();
+          alert(json.message);
+        } else {
+          alert('ลบสมาชิกไม่สำเร็จ: ' + json.message);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+      }
+    }
+
+    async function loadDashboardData() {
+      try {
+        // 1. Settings
+        const sRes = await fetch('/api/settings');
+        const sJson = await sRes.json();
+        if (sJson.success) {
+          const liffId = sJson.data.liffId;
+          document.getElementById('liffUrlCode').innerText = liffId 
+            ? `https://liff.line.me/${liffId}` 
+            : 'กรุณาระบุ LINE_LIFF_ID ในไฟล์ .env';
+          document.getElementById('shopSubTitle').innerText = `${sJson.data.shopName || 'ร้านค้า'} • ระบบสะสมแต้ม 1 บาท = 1 แต้ม`;
+        }
+
+        // 2. Members
+        const mRes = await fetch('/api/admin/members');
+        const mJson = await mRes.json();
+        const members = mJson.data || [];
+
+        // 3. Transactions
+        const tRes = await fetch('/api/admin/transactions');
+        const tJson = await tRes.json();
+        const txns = tJson.data || [];
+
+        // Calculate Stats
+        const totalPoints = members.reduce((sum, u) => sum + (u.points || 0), 0);
+        const totalSpent = members.reduce((sum, u) => sum + (u.totalSpent || 0), 0);
+
+        document.getElementById('statMembers').innerText = `${members.length.toLocaleString()} คน`;
+        document.getElementById('statPoints').innerText = `${totalPoints.toLocaleString()} แต้ม`;
+        document.getElementById('statSpent').innerText = `฿${totalSpent.toLocaleString()}`;
+
+        // Render Members Table
+        const mBody = document.getElementById('membersTableBody');
+        if (members.length === 0) {
+          mBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลสมาชิก (รอสมาชิกลงทะเบียนผ่าน LINE OA)</td></tr>`;
+        } else {
+          mBody.innerHTML = members.map(m => {
+            const dateStr = new Date(m.createdAt).toLocaleDateString('th-TH');
+            return `
+              <tr class="border-b border-slate-50 hover:bg-slate-50/50">
+                <td class="py-3 px-4 font-mono font-bold text-slate-700">${m.id}</td>
+                <td class="py-3 px-4 font-semibold text-slate-800 flex items-center space-x-2">
+                  ${m.pictureUrl ? `<img src="${m.pictureUrl}" class="w-6 h-6 rounded-full object-cover">` : ''}
+                  <span>${m.displayName}</span>
+                </td>
+                <td class="py-3 px-4"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-bold">${m.tier || 'Member'}</span></td>
+                <td class="py-3 px-4 text-right font-medium">฿${Number(m.totalSpent || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-right font-bold text-[#7a0c1e]">${Number(m.points || 0).toLocaleString()} แต้ม</td>
+                <td class="py-3 px-4 text-center text-slate-400">${dateStr}</td>
+                <td class="py-3 px-4 text-center">
+                  <button onclick="deleteMember('${m.id}', '${m.displayName}')" 
+                          class="p-1.5 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 transition inline-flex items-center justify-center" 
+                          title="ลบสมาชิกที่ไม่ได้ใช้แล้ว">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        // Render Transactions Table
+        const tBody = document.getElementById('txnsTableBody');
+        if (txns.length === 0) {
+          tBody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">ยังไม่มีประวัติการทำรายการ</td></tr>`;
+        } else {
+          tBody.innerHTML = txns.slice(0, 15).map(t => {
+            const isEarn = t.type === 'EARN';
+            const dateStr = new Date(t.createdAt).toLocaleString('th-TH');
+            return `
+              <tr class="border-b border-slate-50 hover:bg-slate-50/50">
+                <td class="py-3 px-4 font-mono text-slate-500">${t.id}</td>
+                <td class="py-3 px-4 font-mono font-bold text-slate-700">${t.userId}</td>
+                <td class="py-3 px-4 text-slate-800">${t.description}</td>
+                <td class="py-3 px-4 text-right text-slate-600">฿${Number(t.amount || 0).toLocaleString()}</td>
+                <td class="py-3 px-4 text-right font-bold ${isEarn ? 'text-[#7a0c1e]' : 'text-slate-500'}">
+                  ${isEarn ? '+' : ''}${Number(t.points).toLocaleString()}
+                </td>
+                <td class="py-3 px-4 text-right font-medium text-slate-700">${Number(t.balanceAfter).toLocaleString()}</td>
+                <td class="py-3 px-4 text-center text-slate-400">${dateStr}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        lucide.createIcons();
+      } catch (e) {
+        console.error('Failed to load dashboard:', e);
+      }
+    }
+
+    function copyLiffUrl() {
+      const code = document.getElementById('liffUrlCode').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('คัดลอกลิงก์ LIFF เรียบร้อยแล้ว:\n' + code);
+      }).catch(() => {
+        prompt('คัดลอกลิงก์นี้ไปใส่ใน Rich Menu:', code);
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

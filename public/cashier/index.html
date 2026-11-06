@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบแคชเชียร์ - เพิ่มแต้มสะสมตามยอดซื้อ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HTML5 QR Code Scanner -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f1f5f9; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-16">
+
+  <!-- Navbar -->
+  <nav class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-md">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-[#7a0c1e] flex items-center justify-center font-bold text-lg text-white shadow-md shadow-rose-950/30">
+        ฿
+      </div>
+      <div>
+        <h1 class="font-bold text-base leading-tight">ระบบแคชเชียร์สะสมแต้ม (Staff Portal)</h1>
+        <p class="text-xs text-rose-300">อัตราส่วน: 1 บาท = 1 แต้ม</p>
+      </div>
+    </div>
+    <a href="/" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+      <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+      <span>แดชบอร์ดหลัก</span>
+    </a>
+  </nav>
+
+  <div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- Card 1: Member Identification (Search or Scan) -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h2 class="font-bold text-base text-slate-800 flex items-center space-x-2">
+          <i data-lucide="user-check" class="w-5 h-5 text-[#7a0c1e]"></i>
+          <span>1. ระบุข้อมูลลูกค้า</span>
+        </h2>
+        <button id="toggleScannerBtn" onclick="toggleCameraScanner()" class="text-xs font-semibold text-[#7a0c1e] bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5">
+          <i data-lucide="camera" class="w-4 h-4"></i>
+          <span id="scannerBtnText">เปิดกล้องสแกน QR</span>
+        </button>
+      </div>
+
+      <!-- Camera QR Scanner Viewport (Hidden by default) -->
+      <div id="scannerSection" class="hidden rounded-2xl overflow-hidden border-2 border-dashed border-rose-400 bg-slate-900 p-2">
+        <div id="reader" class="w-full"></div>
+        <p class="text-center text-xs text-slate-400 py-2">นำกล้องไปส่องที่ QR Code สมาชิกใน LINE ของลูกค้า</p>
+      </div>
+
+      <!-- Search Input Form -->
+      <div class="space-y-2">
+        <label class="text-xs font-medium text-slate-500">พิมพ์รหัสสมาชิก / เบอร์โทรศัพท์ / สแกน QR</label>
+        <div class="flex space-x-2">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400"></i>
+            <input type="text" id="memberInput" placeholder="พิมพ์รหัสสมาชิก หรือ เบอร์โทรศัพท์"
+                   class="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#7a0c1e] font-mono text-sm bg-slate-50 focus:bg-white transition"
+                   onkeydown="if(event.key==='Enter') lookupMember()">
+          </div>
+          <button onclick="lookupMember()" class="bg-[#7a0c1e] hover:bg-[#630917] active:scale-95 text-white px-5 py-3 rounded-2xl text-sm font-semibold transition flex items-center space-x-1.5 shadow-sm">
+            <span>ค้นหา</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Member Profile Card (Hidden by default, shown when found) -->
+      <div id="memberFoundCard" class="hidden bg-gradient-to-br from-slate-50 to-rose-50/50 rounded-2xl p-4 border border-rose-200/70 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <img id="mAvatar" src="https://via.placeholder.com/100" class="w-12 h-12 rounded-2xl object-cover border border-rose-300">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 id="mName" class="font-bold text-slate-900 text-sm">-</h3>
+              <span id="mTier" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300">Member</span>
+            </div>
+            <p id="mIdPhone" class="text-xs text-slate-500 mt-0.5">-</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-[11px] text-slate-400">แต้มปัจจุบัน</p>
+          <p class="text-xl font-black text-[#7a0c1e]"><span id="mPoints">0</span> <span class="text-xs font-normal text-slate-500">แต้ม</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Enter Purchase Amount & Calculate 1:1 Points -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-5">
+      <div class="border-b border-slate-100 pb-3">
+        <h2 class="font-bold text-base text-slate-800 flex items-center space-x-2">
+          <i data-lucide="calculator" class="w-5 h-5 text-[#7a0c1e]"></i>
+          <span>2. ระบุยอดเงินที่ลูกค้าซื้อสินค้า</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-0.5">ระบบจะคำนวณ 1 บาท = 1 แต้ม อัตโนมัติ</p>
+      </div>
+
+      <!-- Amount Input -->
+      <div class="space-y-2">
+        <label class="text-xs font-medium text-slate-500">ยอดเงินที่ชำระ (บาท)</label>
+        <div class="relative">
+          <span class="absolute left-4 top-3 text-2xl font-bold text-slate-400">฿</span>
+          <input type="number" id="purchaseAmount" step="1" min="1" placeholder="0.00" oninput="updatePointPreview()"
+                 class="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-rose-300 focus:outline-none focus:ring-4 focus:ring-rose-500/20 text-3xl font-black text-slate-900 tracking-tight">
+        </div>
+
+        <!-- Quick Amount Chips -->
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button onclick="setAmount(50)" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition">+50</button>
+          <button onclick="setAmount(100)" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition">+100</button>
+          <button onclick="setAmount(250)" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition">+250</button>
+          <button onclick="setAmount(500)" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition">+500</button>
+          <button onclick="setAmount(1000)" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition">+1,000</button>
+          <button onclick="clearAmount()" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-600 transition">ล้างยอด</button>
+        </div>
+      </div>
+
+      <!-- Bill Note / Reference -->
+      <div class="space-y-1">
+        <label class="text-xs font-medium text-slate-500">หมายเหตุ / เลขที่ใบเสร็จ (ถ้ามี)</label>
+        <input type="text" id="billNote" placeholder="เช่น บิล #1024, ค่ากาแฟและขนม" 
+               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#7a0c1e]">
+      </div>
+
+      <!-- Real-time Point Preview Banner -->
+      <div class="bg-rose-50/70 border border-rose-200/80 rounded-2xl p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-[#7a0c1e] text-white flex items-center justify-center font-bold shadow-sm">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <p class="text-xs text-rose-950 font-semibold">แต้มที่จะได้รับเข้า LINE ทันที</p>
+            <p class="text-xs text-rose-700">อัตราคำนวณ 1 บาท : 1 แต้ม</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span id="pointsPreview" class="text-3xl font-black text-[#7a0c1e]">+0</span>
+          <span class="text-xs font-bold text-rose-900 ml-1">แต้ม</span>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button onclick="submitPoints()" id="submitBtn"
+              class="w-full bg-[#7a0c1e] hover:bg-[#630917] active:scale-[0.99] text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-rose-950/20 flex items-center justify-center space-x-2 transition">
+        <i data-lucide="check-circle" class="w-5 h-5"></i>
+        <span>บันทึกแต้ม & ส่งแจ้งเตือนเข้า LINE</span>
+      </button>
+    </div>
+
+    <!-- Card 3: Cashier Redeem Rewards for Customer -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h2 class="font-bold text-base text-slate-800 flex items-center space-x-2">
+            <i data-lucide="gift" class="w-5 h-5 text-amber-500"></i>
+            <span>3. แลกของรางวัลให้ลูกค้า (ใช้แต้มลด/รับของ)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">เลือกของรางวัลเพื่อตัดแต้มให้ลูกค้าที่เคาน์เตอร์คิดเงิน</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="space-y-1">
+          <label class="text-xs font-medium text-slate-500">เลือกของรางวัลที่ต้องการแลก</label>
+          <select id="cashierRewardSelect" onchange="updateCashierRewardPreview()"
+                  class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-slate-700">
+            <option value="">-- กรุณาเลือกของรางวัล --</option>
+          </select>
+        </div>
+
+        <div id="cashierRewardInfo" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p id="cRwTitle" class="font-bold text-xs text-amber-900">-</p>
+            <p id="cRwDesc" class="text-[11px] text-amber-700 mt-0.5">-</p>
+          </div>
+          <div class="text-right">
+            <span id="cRwPoints" class="text-xl font-black text-amber-700">0</span>
+            <span class="text-xs font-bold text-amber-800">แต้ม</span>
+          </div>
+        </div>
+
+        <button onclick="submitCashierRedeem()" id="cashierRedeemBtn" disabled
+                class="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99] text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition flex items-center justify-center space-x-2">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>ยืนยันการตัดแต้มแลกรางวัล</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Recent Transactions at Checkout -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-3">
+      <h3 class="font-bold text-sm text-slate-700 flex items-center space-x-2">
+        <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
+        <span>รายการบันทึกล่าสุดหน้าร้าน</span>
+      </h3>
+      <div id="recentTxns" class="space-y-2">
+        <p class="text-xs text-slate-400 py-3 text-center">ยังไม่มีรายการบันทึก</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Notification Modal -->
+  <div id="successModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in fade-in zoom-in duration-150">
+      <div class="w-16 h-16 bg-rose-100 text-[#7a0c1e] rounded-full flex items-center justify-center mx-auto">
+        <i data-lucide="check" class="w-8 h-8"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-xl text-slate-800">เพิ่มแต้มสำเร็จ!</h3>
+        <p id="successMsg" class="text-xs text-slate-500 mt-1">ส่งการ์ดแจ้งแต้มเข้าแชท LINE ลูกค้าเรียบร้อยแล้ว</p>
+      </div>
+      <div class="bg-slate-50 rounded-2xl p-4 text-left text-xs space-y-1.5 border border-slate-100">
+        <div class="flex justify-between">
+          <span class="text-slate-400">ลูกค้า:</span>
+          <span id="succCustomer" class="font-bold text-slate-700">-</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">ยอดเงินที่ซื้อ:</span>
+          <span id="succAmount" class="font-bold text-slate-700">฿0.00</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">แต้มที่ได้รับ:</span>
+          <span id="succPoints" class="font-bold text-[#7a0c1e]">+0 แต้ม</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">แต้มสะสมทั้งหมด:</span>
+          <span id="succNewBalance" class="font-bold text-slate-900">0 แต้ม</span>
+        </div>
+      </div>
+      <button onclick="closeSuccessModal()" class="w-full bg-slate-900 text-white font-semibold py-3 rounded-2xl">
+        ทำรายการถัดไป
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let activeCustomer = null;
+    let html5QrCode = null;
+    let isScannerRunning = false;
+    let cashierRewards = [];
+
+    async function init() {
+      lucide.createIcons();
+      await loadRecentTxns();
+      await loadCashierRewards();
+    }
+
+    async function loadCashierRewards() {
+      try {
+        const res = await fetch('/api/rewards');
+        const json = await res.json();
+        if (json.success) {
+          cashierRewards = json.data || [];
+          const select = document.getElementById('cashierRewardSelect');
+          select.innerHTML = '<option value="">-- กรุณาเลือกของรางวัล --</option>' + 
+            cashierRewards.map(r => `
+              <option value="${r.id}">${r.title} (ใช้ ${r.pointsRequired} แต้ม | เหลือ ${r.stock} ชิ้น)</option>
+            `).join('');
+        }
+      } catch (e) {
+        console.warn('Failed to load rewards for cashier:', e);
+      }
+    }
+
+    function updateCashierRewardPreview() {
+      const select = document.getElementById('cashierRewardSelect');
+      const rewardId = select.value;
+      const infoBox = document.getElementById('cashierRewardInfo');
+      const btn = document.getElementById('cashierRedeemBtn');
+
+      if (!rewardId) {
+        infoBox.classList.add('hidden');
+        btn.disabled = true;
+        return;
+      }
+
+      const reward = cashierRewards.find(r => r.id === rewardId);
+      if (!reward) return;
+
+      document.getElementById('cRwTitle').innerText = reward.title;
+      document.getElementById('cRwDesc').innerText = reward.description || `คงเหลือ ${reward.stock} ชิ้น`;
+      document.getElementById('cRwPoints').innerText = reward.pointsRequired;
+      infoBox.classList.remove('hidden');
+
+      if (!activeCustomer) {
+        btn.disabled = true;
+        btn.innerText = 'กรุณาระบุข้อมูลลูกค้าก่อน';
+        return;
+      }
+
+      const custPoints = Number(activeCustomer.points || 0);
+      if (custPoints < reward.pointsRequired) {
+        btn.disabled = true;
+        btn.innerText = `แต้มไม่พอ (ลูกค้ามี ${custPoints} แต้ม / ต้องใช้ ${reward.pointsRequired} แต้ม)`;
+      } else if (reward.stock <= 0) {
+        btn.disabled = true;
+        btn.innerText = 'ของรางวัลนี้หมดสต็อกแล้ว';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4"></i><span>ยืนยันตัด ${reward.pointsRequired} แต้ม แลกรางวัล</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    async function submitCashierRedeem() {
+      if (!activeCustomer) {
+        alert('กรุณาระบุลูกค้าก่อน');
+        return;
+      }
+
+      const rewardId = document.getElementById('cashierRewardSelect').value;
+      const reward = cashierRewards.find(r => r.id === rewardId);
+      if (!reward) return;
+
+      if (!confirm(`ยืนยันการตัด ${reward.pointsRequired} แต้ม ของคุณ ${activeCustomer.displayName} เพื่อแลก "${reward.title}"?`)) return;
+
+      const btn = document.getElementById('cashierRedeemBtn');
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/rewards/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: activeCustomer.id,
+            rewardId: reward.id
+          })
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          activeCustomer = json.data.user;
+          document.getElementById('mPoints').innerText = Number(activeCustomer.points).toLocaleString();
+
+          document.getElementById('succCustomer').innerText = activeCustomer.displayName;
+          document.getElementById('succAmount').innerText = 'แลกของรางวัล';
+          document.getElementById('succPoints').innerText = `-${reward.pointsRequired} แต้ม`;
+          document.getElementById('succNewBalance').innerText = `${activeCustomer.points.toLocaleString()} แต้ม`;
+          document.getElementById('successModal').classList.remove('hidden');
+
+          document.getElementById('cashierRewardSelect').value = '';
+          updateCashierRewardPreview();
+          loadRecentTxns();
+          loadCashierRewards();
+        } else {
+          alert('แลกรางวัลไม่สำเร็จ: ' + json.message);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function lookupMember(idOverride) {
+      const query = idOverride || document.getElementById('memberInput').value.trim();
+      if (!query) {
+        alert('กรุณากรอกรหัสสมาชิก หรือ เบอร์โทร');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/user/${encodeURIComponent(query)}`);
+        const json = await res.json();
+        if (json.success) {
+          activeCustomer = json.data.user;
+          document.getElementById('mName').innerText = activeCustomer.displayName;
+          document.getElementById('mTier').innerText = activeCustomer.tier || 'Member';
+          document.getElementById('mIdPhone').innerText = `${activeCustomer.id} • ${activeCustomer.phone ? 'เบอร์ ' + activeCustomer.phone : 'LINE Member'}`;
+          document.getElementById('mPoints').innerText = Number(activeCustomer.points).toLocaleString();
+          if (activeCustomer.pictureUrl) {
+            document.getElementById('mAvatar').src = activeCustomer.pictureUrl;
+          }
+          document.getElementById('memberFoundCard').classList.remove('hidden');
+          updateCashierRewardPreview();
+        } else {
+          alert('ไม่พบข้อมูลสมาชิก: ' + json.message);
+          document.getElementById('memberFoundCard').classList.add('hidden');
+          activeCustomer = null;
+          updateCashierRewardPreview();
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์: ' + err.message);
+      }
+    }
+
+    function updatePointPreview() {
+      const amount = parseFloat(document.getElementById('purchaseAmount').value) || 0;
+      // 1 บาท = 1 แต้ม
+      const points = Math.floor(amount);
+      document.getElementById('pointsPreview').innerText = `+${points.toLocaleString()}`;
+    }
+
+    function setAmount(val) {
+      const input = document.getElementById('purchaseAmount');
+      const current = parseFloat(input.value) || 0;
+      input.value = current + val;
+      updatePointPreview();
+    }
+
+    function clearAmount() {
+      document.getElementById('purchaseAmount').value = '';
+      updatePointPreview();
+    }
+
+    async function submitPoints() {
+      if (!activeCustomer) {
+        alert('กรุณาระบุและค้นหาข้อมูลสมาชิกก่อน');
+        return;
+      }
+
+      const amount = parseFloat(document.getElementById('purchaseAmount').value);
+      if (!amount || amount <= 0) {
+        alert('กรุณาระบุยอดเงินที่ชำระให้ถูกต้อง');
+        return;
+      }
+
+      const note = document.getElementById('billNote').value.trim();
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-50');
+
+      try {
+        const res = await fetch('/api/cashier/add-points', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: activeCustomer.id,
+            amount: amount,
+            description: note || `ซื้อสินค้าหน้าร้าน (ยอด ฿${amount.toLocaleString()})`
+          })
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          activeCustomer = json.data.user;
+          document.getElementById('mPoints').innerText = Number(activeCustomer.points).toLocaleString();
+
+          document.getElementById('succCustomer').innerText = activeCustomer.displayName;
+          document.getElementById('succAmount').innerText = `฿${amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+          document.getElementById('succPoints').innerText = `+${json.data.pointsEarned.toLocaleString()} แต้ม`;
+          document.getElementById('succNewBalance').innerText = `${activeCustomer.points.toLocaleString()} แต้ม`;
+          document.getElementById('successModal').classList.remove('hidden');
+
+          document.getElementById('purchaseAmount').value = '';
+          document.getElementById('billNote').value = '';
+          updatePointPreview();
+          loadRecentTxns();
+        } else {
+          alert('บันทึกไม่สำเร็จ: ' + json.message);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50');
+      }
+    }
+
+    function closeSuccessModal() {
+      document.getElementById('successModal').classList.add('hidden');
+    }
+
+    async function loadRecentTxns() {
+      try {
+        const res = await fetch('/api/admin/transactions');
+        const json = await res.json();
+        if (json.success && json.data.length > 0) {
+          const list = document.getElementById('recentTxns');
+          list.innerHTML = json.data.slice(0, 5).map(t => {
+            const isEarn = t.type === 'EARN';
+            return `
+              <div class="flex items-center justify-between text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <div>
+                  <span class="font-bold text-slate-800">${t.userId}</span>
+                  <span class="text-slate-400 mx-1">•</span>
+                  <span class="text-slate-500">${t.description}</span>
+                </div>
+                <span class="font-bold ${isEarn ? 'text-[#7a0c1e]' : 'text-slate-500'}">
+                  ${isEarn ? '+' : ''}${t.points} แต้ม
+                </span>
+              </div>
+            `;
+          }).join('');
+        }
+      } catch (e) {
+        console.warn('Failed to load recent txns:', e);
+      }
+    }
+
+    // Camera QR Scanner Toggle
+    function toggleCameraScanner() {
+      const section = document.getElementById('scannerSection');
+      const btnText = document.getElementById('scannerBtnText');
+
+      if (isScannerRunning) {
+        html5QrCode.stop().then(() => {
+          section.classList.add('hidden');
+          btnText.innerText = 'เปิดกล้องสแกน QR';
+          isScannerRunning = false;
+        });
+      } else {
+        section.classList.remove('hidden');
+        btnText.innerText = 'ปิดกล้อง';
+        isScannerRunning = true;
+
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode("reader");
+        }
+
+        html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          (decodedText) => {
+            document.getElementById('memberInput').value = decodedText;
+            lookupMember(decodedText);
+            toggleCameraScanner();
+          },
+          (err) => {}
+        ).catch(err => {
+          alert('ไม่สามารถเปิดกล้องได้: ' + err);
+          section.classList.add('hidden');
+          btnText.innerText = 'เปิดกล้องสแกน QR';
+          isScannerRunning = false;
+        });
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "line-point-system",
+  "version": "1.0.0",
+  "description": "ระบบสะสมแต้ม LINE OA แบบ 1 บาท = 1 แต้ม พร้อม LIFF และระบบแคชเชียร์",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "line-oa",
+    "liff",
+    "loyalty",
+    "points"
+  ],
+  "author": "",
+  "license": "MIT"
+}
